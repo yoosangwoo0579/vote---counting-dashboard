@@ -188,6 +188,90 @@
     }
     .toast.show { opacity: 1; transform: translate(-50%, 0); }
     footer { width: min(1180px, calc(100% - 32px)); margin: 0 auto; color: var(--muted); font-size: .84rem; text-align: center; }
+
+    .presentation-mode {
+      background: #0b1220;
+    }
+    .presentation-mode .topbar {
+      padding: 26px 20px 30px;
+    }
+    .presentation-mode .eyebrow {
+      display: none;
+    }
+    .presentation-mode .title {
+      font-size: clamp(2rem, 4vw, 3.6rem);
+    }
+    .presentation-mode main {
+      width: min(1500px, calc(100% - 28px));
+      margin-top: -14px;
+    }
+    .presentation-mode .toolbar {
+      padding: 10px 12px;
+      box-shadow: none;
+      background: rgba(255,255,255,.96);
+    }
+    .presentation-mode .summary-grid {
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin: 12px 0;
+    }
+    .presentation-mode .summary-card {
+      padding: 13px 16px;
+      border-radius: 14px;
+    }
+    .presentation-mode .summary-value {
+      font-size: clamp(1.35rem, 3vw, 2.1rem);
+    }
+    .presentation-mode .candidate-header {
+      margin: 16px 0 10px;
+    }
+    .presentation-mode .candidate-grid {
+      grid-template-columns: repeat(auto-fit, minmax(205px, 1fr));
+      gap: 10px;
+    }
+    .presentation-mode .candidate-card {
+      padding: 15px;
+      border-radius: 14px;
+      box-shadow: 0 8px 20px rgba(15,23,42,.10);
+    }
+    .presentation-mode .candidate-name {
+      font-size: 1.05rem;
+    }
+    .presentation-mode .vote-number {
+      margin: 12px 0 0;
+      font-size: 2.15rem;
+    }
+    .presentation-mode .vote-rate {
+      margin-top: 8px;
+      font-size: .9rem;
+    }
+    .presentation-mode .bar-track {
+      margin-top: 12px;
+      height: 10px;
+    }
+    .presentation-mode .vote-controls {
+      margin-top: 12px;
+      gap: 6px;
+    }
+    .presentation-mode .vote-controls .btn {
+      min-height: 38px;
+      padding: 6px 8px;
+      font-size: .9rem;
+    }
+    .presentation-mode footer {
+      display: none;
+    }
+    @media (min-width: 1100px) {
+      .presentation-mode .candidate-grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+      }
+    }
+    @media (min-width: 720px) and (max-width: 1099px) {
+      .presentation-mode .candidate-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+    }
+
     @media (max-width: 720px) {
       .topbar { padding: 26px 16px 38px; }
       .topbar-inner, main, footer { width: min(100% - 24px, 1180px); }
@@ -209,7 +293,7 @@
         <p class="eyebrow">투표 개표 관리</p>
         <h1 id="pageTitle" class="title" contenteditable="true" spellcheck="false"
             aria-label="대제목. 클릭하여 수정할 수 있습니다.">실시간 투표 개표 현황</h1>
-        <p class="title-hint">대제목을 클릭해 수정할 수 있습니다 · Enter 저장 · Escape 취소</p>
+        
       </div>
     </header>
 
@@ -219,6 +303,7 @@
           <button class="btn btn-primary" id="addCandidateBtn">＋ 후보자 추가</button>
           <button class="btn" id="undoBtn" disabled>↶ 실행 취소</button>
           <button class="btn btn-danger" id="resetBtn">전체 초기화</button>
+          <button class="btn" id="fullscreenBtn">전체 화면 보기</button>
         </div>
         <div class="toolbar-group">
           <span class="view-label">표시 방식</span>
@@ -495,6 +580,43 @@
         if (!confirm("후보자와 득표수를 모두 초기화할까요? 이 작업은 실행 취소할 수 있습니다.")) return;
         commit(() => state = { title: state.title, view: state.view, candidates: [] }, "전체 개표 현황을 초기화했습니다.");
       });
+
+
+      const fullscreenBtn = $("#fullscreenBtn");
+      function isFullscreen() {
+        return document.fullscreenElement || document.webkitFullscreenElement;
+      }
+      function updateFullscreenButton() {
+        fullscreenBtn.textContent = isFullscreen() || document.body.classList.contains("presentation-mode")
+          ? "전체 화면 닫기" : "전체 화면 보기";
+      }
+      async function toggleFullscreen() {
+        const root = document.documentElement;
+        try {
+          if (!isFullscreen()) {
+            if (root.requestFullscreen) await root.requestFullscreen();
+            else if (root.webkitRequestFullscreen) root.webkitRequestFullscreen();
+            document.body.classList.add("presentation-mode");
+          } else {
+            if (document.exitFullscreen) await document.exitFullscreen();
+            else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+            document.body.classList.remove("presentation-mode");
+          }
+        } catch {
+          document.body.classList.toggle("presentation-mode");
+        }
+        updateFullscreenButton();
+      }
+      fullscreenBtn.addEventListener("click", toggleFullscreen);
+      document.addEventListener("fullscreenchange", () => {
+        if (!isFullscreen()) document.body.classList.remove("presentation-mode");
+        updateFullscreenButton();
+      });
+      document.addEventListener("webkitfullscreenchange", () => {
+        if (!isFullscreen()) document.body.classList.remove("presentation-mode");
+        updateFullscreenButton();
+      });
+      updateFullscreenButton();
 
       window.addEventListener("storage", e => {
         if (e.key === STORAGE_KEY && e.newValue) {
